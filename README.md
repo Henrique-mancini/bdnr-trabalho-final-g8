@@ -5,12 +5,10 @@
 [![Node.js](https://img.shields.io/badge/Node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 
 ## Integrantes do Grupo (Grupo G8)
-* Henrique Mancini
-* [Nome do Integrante 2]
-* [Nome do Integrante 3]
-* [Nome do Integrante 4]
-* [Nome do Integrante 5]
-* [Nome do Integrante 6]
+* Davi da Silva Pereira Maranduba
+* Henrique Mancini Malafaia
+* Matheus Freesz
+* Pedro Henrique Coelho Guerson
 
 ## Banco de Dados Escolhido
 * **Banco de Dados:** TimescaleDB (Extensão do PostgreSQL otimizada para Time-Series)

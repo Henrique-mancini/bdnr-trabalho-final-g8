@@ -1,2 +1,4 @@
 backend/node_modules/
 .env
+RELATORIO*.md
+RELATORIO*.pdf

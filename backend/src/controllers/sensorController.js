@@ -1,6 +1,5 @@
 const db = require('../database');
 
-// [READ] - Listar todas as leituras ordenadas chronologicamente
 const listarLeituras = async (req, res) => {
   try {
     const query = 'SELECT * FROM leituras_clima ORDER BY data_leitura DESC';
@@ -11,12 +10,10 @@ const listarLeituras = async (req, res) => {
   }
 };
 
-// [CREATE] - Criar uma nova leitura de telemetria climática
 const criarLeitura = async (req, res) => {
   try {
     const { id_estacao, dados_payload } = req.body;
     
-    // Insere na tabela validando a FK de estacao e o payload JSONB
     const query = `
       INSERT INTO leituras_clima (id_estacao, dados_payload)
       VALUES ($1, $2)
@@ -30,7 +27,6 @@ const criarLeitura = async (req, res) => {
   }
 };
 
-// [UPDATE] - Atualizar leituras passadas com base no ID
 const atualizarLeitura = async (req, res) => {
   try {
     const { id } = req.params;
@@ -53,7 +49,6 @@ const atualizarLeitura = async (req, res) => {
   }
 };
 
-// [DELETE] - Remover leituras físicas do histórico
 const deletarLeitura = async (req, res) => {
   try {
     const { id } = req.params;
@@ -72,7 +67,6 @@ const deletarLeitura = async (req, res) => {
   }
 };
 
-// [CONSULTA COMPLEXA 1] - Obter relatório com JOIN, desestruturação de array e filtros
 const obterRelatorioEventos = async (req, res) => {
   try {
     const tempLimite = req.query.temp || 20.0;
@@ -93,7 +87,6 @@ const obterRelatorioEventos = async (req, res) => {
   }
 };
 
-// [CONSULTA COMPLEXA 2] - Obter dados agregados por intervalos e cidades
 const obterMediaTemporal = async (req, res) => {
   try {
     const intervalo = req.query.intervalo || '5 minutes';

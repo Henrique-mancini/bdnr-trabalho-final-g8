@@ -1,7 +1,5 @@
--- Habilitar a extensão do TimescaleDB no banco atual
 CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
--- Criar tabela relacional
 CREATE TABLE estacoes_meteorologicas (
     id_estacao VARCHAR(50) PRIMARY KEY,
     nome_estacao VARCHAR(100) NOT NULL,
@@ -10,7 +8,6 @@ CREATE TABLE estacoes_meteorologicas (
     cidade VARCHAR(100) NOT NULL
 );
 
--- Criar tabela de telemetria
 CREATE TABLE leituras_clima (
     id SERIAL,
     id_estacao VARCHAR(50) NOT NULL,
@@ -20,13 +17,10 @@ CREATE TABLE leituras_clima (
     CONSTRAINT fk_estacao FOREIGN KEY (id_estacao) REFERENCES estacoes_meteorologicas(id_estacao) ON DELETE CASCADE
 );
 
--- Converter em hypertable
 SELECT create_hypertable('leituras_clima', 'data_leitura');
 
--- Indexar JSONB
 CREATE INDEX idx_leituras_payload ON leituras_clima USING GIN (dados_payload);
 
--- Inserir dados de teste (Sementes)
 INSERT INTO estacoes_meteorologicas (id_estacao, nome_estacao, modelo_sensor, altitude_metros, cidade) VALUES
 ('EST_JF_01', 'Estação Central Juiz de Fora', 'DHT22-Pro', 678, 'Juiz de Fora'),
 ('EST_TR_02', 'Estação Leste Três Rios', 'BME280-Max', 269, 'Três Rios');

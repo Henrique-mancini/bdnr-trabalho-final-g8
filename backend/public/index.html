@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TimescaleDB + JSONB Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .glass {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-slate-950">
+
+  <header class="flex-none glass border-b border-slate-800/50 px-6 py-4 flex items-center justify-between z-10">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+        <i data-lucide="cloud-lightning" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-400 bg-clip-text text-transparent">ClimaEstação</h1>
+        <p class="text-xs text-slate-400 font-medium">TimescaleDB + JSONB Telemetria</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        API Conectada
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 flex overflow-hidden">
+    <aside class="w-64 glass border-r border-slate-800/50 flex flex-col justify-between p-4 flex-none">
+      <nav class="space-y-1">
+        <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          Painel Principal
+        </button>
+        <button onclick="switchTab('query1')" id="btn-tab-query1" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40">
+          <i data-lucide="database-zap" class="w-4 h-4"></i>
+          Relatório de Eventos
+        </button>
+        <button onclick="switchTab('query2')" id="btn-tab-query2" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40">
+          <i data-lucide="trending-up" class="w-4 h-4"></i>
+          Média Temporal
+        </button>
+      </nav>
+      
+      <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/50">
+        <div class="text-xs font-semibold text-slate-400 mb-1">Grupo G8</div>
+        <div class="text-[11px] text-slate-500 leading-relaxed">
+          Trabalho Final NoSQL<br>
+          Prof. Nome do Professor<br>
+          TimescaleDB Colunar/Time-Series
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+      <div id="tab-dashboard" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="glass p-5 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold tracking-wider uppercase text-slate-400">Total de Leituras</p>
+              <h3 id="stat-total" class="text-2xl font-bold mt-1">0</h3>
+            </div>
+            <div class="p-3 bg-indigo-600/15 text-indigo-400 rounded-xl border border-indigo-500/20">
+              <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+            </div>
+          </div>
+          
+          <div class="glass p-5 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold tracking-wider uppercase text-slate-400">Temperatura Média</p>
+              <h3 id="stat-temp" class="text-2xl font-bold mt-1">0°C</h3>
+            </div>
+            <div class="p-3 bg-amber-500/15 text-amber-400 rounded-xl border border-amber-500/20">
+              <i data-lucide="thermometer" class="w-5 h-5"></i>
+            </div>
+          </div>
+
+          <div class="glass p-5 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold tracking-wider uppercase text-slate-400">Umidade Média</p>
+              <h3 id="stat-umidade" class="text-2xl font-bold mt-1">0%</h3>
+            </div>
+            <div class="p-3 bg-blue-500/15 text-blue-400 rounded-xl border border-blue-500/20">
+              <i data-lucide="droplet" class="w-5 h-5"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="glass p-6 rounded-2xl lg:col-span-2 flex flex-col h-[380px]">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+              <i data-lucide="line-chart" class="w-4 h-4 text-indigo-400"></i>
+              Histórico de Temperatura (Série Temporal)
+            </h3>
+            <div class="flex-1 min-h-0 relative">
+              <canvas id="tempChart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass p-6 rounded-2xl">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+              Inserir Telemetria (Create)
+            </h3>
+            
+            <form id="createForm" onsubmit="handleCreate(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Estação Meteorológica</label>
+                <select id="form-estacao" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                  <option value="EST_JF_01">EST_JF_01 - Juiz de Fora</option>
+                  <option value="EST_TR_02">EST_TR_02 - Três Rios</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Temperatura (°C)</label>
+                  <input type="number" id="form-temp" step="0.1" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 22.5">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Umidade (%)</label>
+                  <input type="number" id="form-umidade" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 65">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Vento (km/h)</label>
+                  <input type="number" id="form-vento" step="0.1" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 12.0">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Índice UV</label>
+                  <input type="number" id="form-uv" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 2">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-2">Eventos Climáticos (JSONB Array)</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <label class="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" value="chuva_leve" name="eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+                    Chuva
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" value="nevoeiro" name="eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+                    Nevoeiro
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" value="ventania" name="eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+                    Ventania
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" value="trovoada" name="eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+                    Trovoada
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" value="garoa" name="eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+                    Garoa
+                  </label>
+                </div>
+              </div>
+
+              <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all duration-150 shadow-md hover:shadow-lg shadow-indigo-600/15">
+                Enviar Telemetria
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-800/50 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+              <i data-lucide="database" class="w-4 h-4 text-indigo-400"></i>
+              Histórico Geral de Leituras (Read, Update e Delete)
+            </h3>
+          </div>
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/30 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <th class="px-6 py-3">Data/Hora</th>
+                  <th class="px-6 py-3">Estação</th>
+                  <th class="px-6 py-3">Temperatura</th>
+                  <th class="px-6 py-3">Umidade</th>
+                  <th class="px-6 py-3">Vento</th>
+                  <th class="px-6 py-3">Índice UV</th>
+                  <th class="px-6 py-3">Eventos (JSONB)</th>
+                  <th class="px-6 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="readings-tbody" class="divide-y divide-slate-800/50">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-query1" class="space-y-6 hidden">
+        <div class="glass p-6 rounded-2xl">
+          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <i data-lucide="database-zap" class="text-indigo-400"></i>
+            Consulta 1: Relatório de Eventos Complexos
+          </h2>
+          <p class="text-sm text-slate-400 mt-2 max-w-3xl leading-relaxed">
+            Esta consulta cruza dados estruturados das estações (JOIN relacional) com dados semiesquematizados de suas telemetrias (JSONB). Ela desestrutura o array de eventos dinâmicos (equivalente a <strong>$unwind</strong> do MongoDB) e filtra registros pela temperatura interna do payload JSONB (equivalente a <strong>$match</strong>).
+          </p>
+          
+          <div class="mt-6 flex flex-wrap items-end gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Temperatura Mínima (°C)</label>
+              <input type="number" id="q1-temp" value="20.0" step="0.1" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+            </div>
+            <button onclick="runQuery1()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all duration-150">
+              Filtrar e Processar
+            </button>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-800/50">
+            <h3 class="text-sm font-semibold text-slate-300">Resultados da Agregação Híbrida (JOIN + Unwind)</h3>
+          </div>
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/30 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <th class="px-6 py-3">Estação</th>
+                  <th class="px-6 py-3">Cidade</th>
+                  <th class="px-6 py-3">Temperatura</th>
+                  <th class="px-6 py-3">Evento Detectado (Unwound)</th>
+                </tr>
+              </thead>
+              <tbody id="query1-tbody" class="divide-y divide-slate-800/50">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-query2" class="space-y-6 hidden">
+        <div class="glass p-6 rounded-2xl">
+          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <i data-lucide="trending-up" class="text-indigo-400"></i>
+            Consulta 2: Agrupamento Temporal Analítico (Time Bucket)
+          </h2>
+          <p class="text-sm text-slate-400 mt-2 max-w-3xl leading-relaxed">
+            Esta consulta utiliza o motor de séries temporais do TimescaleDB. Ela fatia a linha do tempo em baldes agregados de tempo e calcula estatísticas sobre dados estruturados de localização e dados documentais no payload (média de temperatura e máxima de vento), simulando um <strong>$group</strong> cronológico distribuído.
+          </p>
+          
+          <div class="mt-6 flex flex-wrap items-end gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Intervalo de Agrupamento</label>
+              <select id="q2-intervalo" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="1 minute">1 Minuto</option>
+                <option value="5 minutes">5 Minutos</option>
+                <option value="10 minutes" selected>10 Minutos</option>
+                <option value="30 minutes">30 Minutos</option>
+              </select>
+            </div>
+            <button onclick="runQuery2()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all duration-150">
+              Calcular Média Temporal
+            </button>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-800/50">
+            <h3 class="text-sm font-semibold text-slate-300">Linha de Agrupamento Consolidada</h3>
+          </div>
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/30 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <th class="px-6 py-3">Intervalo de Tempo</th>
+                  <th class="px-6 py-3">Cidade</th>
+                  <th class="px-6 py-3">Temperatura Média</th>
+                  <th class="px-6 py-3">Vento Máximo</th>
+                </tr>
+              </thead>
+              <tbody id="query2-tbody" class="divide-y divide-slate-800/50">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="editModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="glass w-full max-w-md p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i data-lucide="edit" class="w-4 h-4 text-indigo-400"></i>
+          Editar Leitura (Update)
+        </h3>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <form id="editForm" onsubmit="handleUpdate(event)" class="space-y-4">
+        <input type="hidden" id="edit-id">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Estação Meteorológica</label>
+          <select id="edit-estacao" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="EST_JF_01">EST_JF_01 - Juiz de Fora</option>
+            <option value="EST_TR_02">EST_TR_02 - Três Rios</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Temperatura (°C)</label>
+            <input type="number" id="edit-temp" step="0.1" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Umidade (%)</label>
+            <input type="number" id="edit-umidade" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all duration-150">
+          Salvar Alterações
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let tempChartInstance = null;
+
+    async function init() {
+      lucide.createIcons();
+      await fetchReadings();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-dashboard').classList.add('hidden');
+      document.getElementById('tab-query1').classList.add('hidden');
+      document.getElementById('tab-query2').classList.add('hidden');
+      
+      document.getElementById('btn-tab-dashboard').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
+      document.getElementById('btn-tab-query1').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
+      document.getElementById('btn-tab-query2').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
+
+      if(tab === 'dashboard') {
+        document.getElementById('tab-dashboard').classList.remove('hidden');
+        document.getElementById('btn-tab-dashboard').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
+        fetchReadings();
+      } else if(tab === 'query1') {
+        document.getElementById('tab-query1').classList.remove('hidden');
+        document.getElementById('btn-tab-query1').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
+        runQuery1();
+      } else if(tab === 'query2') {
+        document.getElementById('tab-query2').classList.remove('hidden');
+        document.getElementById('btn-tab-query2').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
+        runQuery2();
+      }
+    }
+
+    async function fetchReadings() {
+      try {
+        const res = await fetch('/api/sensor/leituras');
+        const data = await res.json();
+        renderTable(data);
+        renderStats(data);
+        renderChart(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('readings-tbody');
+      tbody.innerHTML = '';
+      
+      data.forEach(r => {
+        const payload = r.dados_payload || {};
+        const ext = payload.condicoes_externas || {};
+        const evs = payload.eventos_climaticos || [];
+        
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-900/30 transition-colors";
+        tr.innerHTML = `
+          <td class="px-6 py-4 font-medium text-slate-300">${new Date(r.data_leitura).toLocaleString()}</td>
+          <td class="px-6 py-4 text-slate-400 font-mono text-xs">${r.id_estacao}</td>
+          <td class="px-6 py-4 text-slate-200 font-semibold">${payload.temperatura || '-'}°C</td>
+          <td class="px-6 py-4 text-slate-200">${payload.umidade || '-'}%</td>
+          <td class="px-6 py-4 text-slate-400">${ext.vento_kmh !== undefined ? ext.vento_kmh + ' km/h' : '-'}</td>
+          <td class="px-6 py-4 text-slate-400">${ext.indice_uv !== undefined ? ext.indice_uv : '-'}</td>
+          <td class="px-6 py-4">
+            <div class="flex flex-wrap gap-1">
+              ${evs.map(ev => `<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${ev}</span>`).join('')}
+              ${evs.length === 0 ? '<span class="text-xs text-slate-500 italic">Nenhum</span>' : ''}
+            </div>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <button onclick="openEditModal(${r.id}, '${r.id_estacao}', ${payload.temperatura || 0}, ${payload.umidade || 0})" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+              </button>
+              <button onclick="handleDelete(${r.id})" class="p-1.5 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-400 transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function renderStats(data) {
+      if (data.length === 0) return;
+      document.getElementById('stat-total').innerText = data.length;
+      
+      let totalTemp = 0;
+      let totalUmidade = 0;
+      let count = 0;
+      
+      data.forEach(r => {
+        const payload = r.dados_payload || {};
+        if (payload.temperatura !== undefined) {
+          totalTemp += parseFloat(payload.temperatura);
+          totalUmidade += parseFloat(payload.umidade);
+          count++;
+        }
+      });
+      
+      if (count > 0) {
+        document.getElementById('stat-temp').innerText = (totalTemp / count).toFixed(1) + '°C';
+        document.getElementById('stat-umidade').innerText = (totalUmidade / count).toFixed(0) + '%';
+      }
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById('tempChart').getContext('2d');
+      const sortedData = [...data].sort((a, b) => new Date(a.data_leitura) - new Date(b.data_leitura));
+      
+      const labels = sortedData.map(r => new Date(r.data_leitura).toLocaleTimeString());
+      const tempJF = sortedData.map(r => r.id_estacao === 'EST_JF_01' ? r.dados_payload.temperatura : null);
+      const tempTR = sortedData.map(r => r.id_estacao === 'EST_TR_02' ? r.dados_payload.temperatura : null);
+
+      if (tempChartInstance) {
+        tempChartInstance.destroy();
+      }
+
+      tempChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Juiz de Fora (EST_JF_01)',
+              data: tempJF,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderWidth: 2,
+              tension: 0.3,
+              spanGaps: true,
+              fill: true
+            },
+            {
+              label: 'Três Rios (EST_TR_02)',
+              data: tempTR,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 2,
+              tension: 0.3,
+              spanGaps: true,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#94a3b8',
+                font: {
+                  family: 'Outfit'
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#64748b', font: { family: 'Outfit' } }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#64748b', font: { family: 'Outfit' } }
+            }
+          }
+        }
+      });
+    }
+
+    async function handleCreate(e) {
+      e.preventDefault();
+      const id_estacao = document.getElementById('form-estacao').value;
+      const temperatura = parseFloat(document.getElementById('form-temp').value);
+      const umidade = parseFloat(document.getElementById('form-umidade').value);
+      const vento = parseFloat(document.getElementById('form-vento').value);
+      const uv = parseInt(document.getElementById('form-uv').value);
+      
+      const checkBoxes = document.getElementsByName('eventos');
+      const eventos_climaticos = [];
+      checkBoxes.forEach(cb => {
+        if (cb.checked) eventos_climaticos.push(cb.value);
+      });
+
+      const body = {
+        id_estacao,
+        dados_payload: {
+          temperatura,
+          umidade,
+          eventos_climaticos,
+          condicoes_externas: {
+            vento_kmh: vento,
+            indice_uv: uv
+          }
+        }
+      };
+
+      try {
+        const res = await fetch('/api/sensor/leituras', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (res.ok) {
+          document.getElementById('createForm').reset();
+          await fetchReadings();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openEditModal(id, estacao, temp, umidade) {
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-estacao').value = estacao;
+      document.getElementById('edit-temp').value = temp;
+      document.getElementById('edit-umidade').value = umidade;
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    async function handleUpdate(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const id_estacao = document.getElementById('edit-estacao').value;
+      const temperatura = parseFloat(document.getElementById('edit-temp').value);
+      const umidade = parseFloat(document.getElementById('edit-umidade').value);
+
+      const body = {
+        id_estacao,
+        dados_payload: {
+          temperatura,
+          umidade,
+          eventos_climaticos: []
+        }
+      };
+
+      try {
+        const res = await fetch(`/api/sensor/leituras/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (res.ok) {
+          closeEditModal();
+          await fetchReadings();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function handleDelete(id) {
+      if(!confirm('Deseja deletar essa leitura?')) return;
+      try {
+        const res = await fetch(`/api/sensor/leituras/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await fetchReadings();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function runQuery1() {
+      const temp = document.getElementById('q1-temp').value;
+      try {
+        const res = await fetch(`/api/sensor/relatorio-eventos?temp=${temp}`);
+        const data = await res.json();
+        
+        const tbody = document.getElementById('query1-tbody');
+        tbody.innerHTML = '';
+        data.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-900/30 transition-colors";
+          tr.innerHTML = `
+            <td class="px-6 py-4 font-semibold text-slate-300">${r.nome_estacao}</td>
+            <td class="px-6 py-4 text-slate-400">${r.cidade}</td>
+            <td class="px-6 py-4 text-amber-500 font-semibold">${r.temperatura}°C</td>
+            <td class="px-6 py-4">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${r.evento_detectado}</span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function runQuery2() {
+      const val = document.getElementById('q2-intervalo').value;
+      try {
+        const res = await fetch(`/api/sensor/media-temporal?intervalo=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        
+        const tbody = document.getElementById('query2-tbody');
+        tbody.innerHTML = '';
+        data.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-900/30 transition-colors";
+          tr.innerHTML = `
+            <td class="px-6 py-4 text-slate-300 font-medium">${new Date(r.intervalo_tempo).toLocaleString()}</td>
+            <td class="px-6 py-4 text-slate-400">${r.cidade}</td>
+            <td class="px-6 py-4 text-slate-200 font-semibold">${r.temp_media}°C</td>
+            <td class="px-6 py-4 text-slate-200">${r.vento_maximo} km/h</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>

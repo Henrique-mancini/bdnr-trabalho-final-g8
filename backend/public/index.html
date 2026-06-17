@@ -72,14 +72,6 @@
           <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
           Painel Principal
         </button>
-        <button onclick="switchTab('query1')" id="btn-tab-query1" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40">
-          <i data-lucide="database-zap" class="w-4 h-4"></i>
-          Relatório de Eventos
-        </button>
-        <button onclick="switchTab('query2')" id="btn-tab-query2" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40">
-          <i data-lucide="trending-up" class="w-4 h-4"></i>
-          Média Temporal
-        </button>
       </nav>
       
       <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/50">
@@ -234,95 +226,6 @@
           </div>
         </div>
       </div>
-
-      <div id="tab-query1" class="space-y-6 hidden">
-        <div class="glass p-6 rounded-2xl">
-          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <i data-lucide="database-zap" class="text-indigo-400"></i>
-            Consulta 1: Relatório de Eventos Complexos
-          </h2>
-          <p class="text-sm text-slate-400 mt-2 max-w-3xl leading-relaxed">
-            Esta consulta cruza dados estruturados das estações (JOIN relacional) com dados semiesquematizados de suas telemetrias (JSONB). Ela desestrutura o array de eventos dinâmicos (equivalente a <strong>$unwind</strong> do MongoDB) e filtra registros pela temperatura interna do payload JSONB (equivalente a <strong>$match</strong>).
-          </p>
-          
-          <div class="mt-6 flex flex-wrap items-end gap-4">
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Temperatura Mínima (°C)</label>
-              <input type="number" id="q1-temp" value="20.0" step="0.1" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-            </div>
-            <button onclick="runQuery1()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all duration-150">
-              Filtrar e Processar
-            </button>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-800/50">
-            <h3 class="text-sm font-semibold text-slate-300">Resultados da Agregação Híbrida (JOIN + Unwind)</h3>
-          </div>
-          <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="border-b border-slate-800 bg-slate-900/30 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                  <th class="px-6 py-3">Estação</th>
-                  <th class="px-6 py-3">Cidade</th>
-                  <th class="px-6 py-3">Temperatura</th>
-                  <th class="px-6 py-3">Evento Detectado (Unwound)</th>
-                </tr>
-              </thead>
-              <tbody id="query1-tbody" class="divide-y divide-slate-800/50">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div id="tab-query2" class="space-y-6 hidden">
-        <div class="glass p-6 rounded-2xl">
-          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <i data-lucide="trending-up" class="text-indigo-400"></i>
-            Consulta 2: Agrupamento Temporal Analítico (Time Bucket)
-          </h2>
-          <p class="text-sm text-slate-400 mt-2 max-w-3xl leading-relaxed">
-            Esta consulta utiliza o motor de séries temporais do TimescaleDB. Ela fatia a linha do tempo em baldes agregados de tempo e calcula estatísticas sobre dados estruturados de localização e dados documentais no payload (média de temperatura e máxima de vento), simulando um <strong>$group</strong> cronológico distribuído.
-          </p>
-          
-          <div class="mt-6 flex flex-wrap items-end gap-4">
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Intervalo de Agrupamento</label>
-              <select id="q2-intervalo" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                <option value="1 minute">1 Minuto</option>
-                <option value="5 minutes">5 Minutos</option>
-                <option value="10 minutes" selected>10 Minutos</option>
-                <option value="30 minutes">30 Minutos</option>
-              </select>
-            </div>
-            <button onclick="runQuery2()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all duration-150">
-              Calcular Média Temporal
-            </button>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-800/50">
-            <h3 class="text-sm font-semibold text-slate-300">Linha de Agrupamento Consolidada</h3>
-          </div>
-          <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="border-b border-slate-800 bg-slate-900/30 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                  <th class="px-6 py-3">Intervalo de Tempo</th>
-                  <th class="px-6 py-3">Cidade</th>
-                  <th class="px-6 py-3">Temperatura Média</th>
-                  <th class="px-6 py-3">Vento Máximo</th>
-                </tr>
-              </thead>
-              <tbody id="query2-tbody" class="divide-y divide-slate-800/50">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 
@@ -376,25 +279,13 @@
 
     function switchTab(tab) {
       document.getElementById('tab-dashboard').classList.add('hidden');
-      document.getElementById('tab-query1').classList.add('hidden');
-      document.getElementById('tab-query2').classList.add('hidden');
       
       document.getElementById('btn-tab-dashboard').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
-      document.getElementById('btn-tab-query1').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
-      document.getElementById('btn-tab-query2').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
 
       if(tab === 'dashboard') {
         document.getElementById('tab-dashboard').classList.remove('hidden');
         document.getElementById('btn-tab-dashboard').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
         fetchReadings();
-      } else if(tab === 'query1') {
-        document.getElementById('tab-query1').classList.remove('hidden');
-        document.getElementById('btn-tab-query1').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
-        runQuery1();
-      } else if(tab === 'query2') {
-        document.getElementById('tab-query2').classList.remove('hidden');
-        document.getElementById('btn-tab-query2').className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white shadow-lg shadow-indigo-600/15";
-        runQuery2();
       }
     }
 
@@ -636,55 +527,6 @@
       }
     }
 
-    async function runQuery1() {
-      const temp = document.getElementById('q1-temp').value;
-      try {
-        const res = await fetch(`/api/sensor/relatorio-eventos?temp=${temp}`);
-        const data = await res.json();
-        
-        const tbody = document.getElementById('query1-tbody');
-        tbody.innerHTML = '';
-        data.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.className = "hover:bg-slate-900/30 transition-colors";
-          tr.innerHTML = `
-            <td class="px-6 py-4 font-semibold text-slate-300">${r.nome_estacao}</td>
-            <td class="px-6 py-4 text-slate-400">${r.cidade}</td>
-            <td class="px-6 py-4 text-amber-500 font-semibold">${r.temperatura}°C</td>
-            <td class="px-6 py-4">
-              <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${r.evento_detectado}</span>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    async function runQuery2() {
-      const val = document.getElementById('q2-intervalo').value;
-      try {
-        const res = await fetch(`/api/sensor/media-temporal?intervalo=${encodeURIComponent(val)}`);
-        const data = await res.json();
-        
-        const tbody = document.getElementById('query2-tbody');
-        tbody.innerHTML = '';
-        data.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.className = "hover:bg-slate-900/30 transition-colors";
-          tr.innerHTML = `
-            <td class="px-6 py-4 text-slate-300 font-medium">${new Date(r.intervalo_tempo).toLocaleString()}</td>
-            <td class="px-6 py-4 text-slate-400">${r.cidade}</td>
-            <td class="px-6 py-4 text-slate-200 font-semibold">${r.temp_media}°C</td>
-            <td class="px-6 py-4 text-slate-200">${r.vento_maximo} km/h</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    }
 
     window.onload = init;
   </script>

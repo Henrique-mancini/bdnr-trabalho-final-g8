@@ -255,6 +255,43 @@
           </div>
         </div>
 
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Vento (km/h)</label>
+            <input type="number" id="edit-vento" step="0.1" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 12.0">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Índice UV</label>
+            <input type="number" id="edit-uv" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="ex: 2">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-2">Eventos Climáticos (JSONB Array)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" value="chuva_leve" name="edit-eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+              Chuva
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" value="nevoeiro" name="edit-eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+              Nevoeiro
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" value="ventania" name="edit-eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+              Ventania
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" value="trovoada" name="edit-eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+              Trovoada
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" value="garoa" name="edit-eventos" class="rounded bg-slate-900 border-slate-800 text-indigo-600 focus:ring-0">
+              Garoa
+            </label>
+          </div>
+        </div>
+
         <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all duration-150">
           Salvar Alterações
         </button>
@@ -264,6 +301,7 @@
 
   <script>
     let tempChartInstance = null;
+    let readingsData = [];
 
     async function init() {
       lucide.createIcons();
@@ -286,6 +324,7 @@
       try {
         const res = await fetch('/api/sensor/leituras');
         const data = await res.json();
+        readingsData = data;
         renderTable(data);
         renderStats(data);
         renderChart(data);
@@ -320,7 +359,7 @@
           </td>
           <td class="px-6 py-4 text-right">
             <div class="flex items-center justify-end gap-2">
-              <button onclick="openEditModal(${r.id}, '${r.id_estacao}', ${payload.temperatura || 0}, ${payload.umidade || 0})" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
+              <button onclick="openEditModal(${r.id})" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="edit" class="w-4 h-4"></i>
               </button>
               <button onclick="handleDelete(${r.id})" class="p-1.5 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-400 transition-colors">
@@ -465,11 +504,26 @@
       }
     }
 
-    function openEditModal(id, estacao, temp, umidade) {
+    function openEditModal(id) {
+      const reading = readingsData.find(r => r.id === id);
+      if (!reading) return;
+
+      const payload = reading.dados_payload || {};
+      const ext = payload.condicoes_externas || {};
+      const evs = payload.eventos_climaticos || [];
+
       document.getElementById('edit-id').value = id;
-      document.getElementById('edit-estacao').value = estacao;
-      document.getElementById('edit-temp').value = temp;
-      document.getElementById('edit-umidade').value = umidade;
+      document.getElementById('edit-estacao').value = reading.id_estacao;
+      document.getElementById('edit-temp').value = payload.temperatura || 0;
+      document.getElementById('edit-umidade').value = payload.umidade || 0;
+      document.getElementById('edit-vento').value = ext.vento_kmh || 0;
+      document.getElementById('edit-uv').value = ext.indice_uv || 0;
+
+      const checkboxes = document.getElementsByName('edit-eventos');
+      checkboxes.forEach(cb => {
+        cb.checked = evs.includes(cb.value);
+      });
+
       document.getElementById('editModal').classList.remove('hidden');
     }
 
@@ -483,13 +537,25 @@
       const id_estacao = document.getElementById('edit-estacao').value;
       const temperatura = parseFloat(document.getElementById('edit-temp').value);
       const umidade = parseFloat(document.getElementById('edit-umidade').value);
+      const vento = parseFloat(document.getElementById('edit-vento').value);
+      const uv = parseInt(document.getElementById('edit-uv').value);
+
+      const checkBoxes = document.getElementsByName('edit-eventos');
+      const eventos_climaticos = [];
+      checkBoxes.forEach(cb => {
+        if (cb.checked) eventos_climaticos.push(cb.value);
+      });
 
       const body = {
         id_estacao,
         dados_payload: {
           temperatura,
           umidade,
-          eventos_climaticos: []
+          eventos_climaticos,
+          condicoes_externas: {
+            vento_kmh: vento,
+            indice_uv: uv
+          }
         }
       };
 
